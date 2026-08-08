@@ -2,7 +2,7 @@ import type { Scene, SceneContext } from "../engine/Scene.js";
 import type { Game } from "../engine/Game.js";
 import { Player } from "../entities/Player.js";
 import { NPC } from "../entities/NPC.js";
-import { TileMap } from "../world/TileMap.js";
+import { TileMap, TileType } from "../world/TileMap.js";
 import { Camera } from "../world/Camera.js";
 import { renderTileMap } from "../world/TileRenderer.js";
 import { drawPersonSprite, drawCallSiteMarker } from "../world/SpriteRenderer.js";
@@ -10,6 +10,7 @@ import { DialogueOverlay } from "./DialogueOverlay.js";
 import { dialogueScripts } from "../data/Dialogue.js";
 import type { PlayerState } from "../data/PlayerState.js";
 import { checkEncounterTrigger, triggerEncounter } from "../systems/EncounterSystem.js";
+import { StationScene } from "./StationScene.js";
 
 const NPC_PALETTE = { body: "#4a7a4a", head: "#e0a878", accent: "#f1c40f" };
 
@@ -50,6 +51,13 @@ export class OverworldScene implements Scene {
     this.camera.follow(this.player.pixelX, this.player.pixelY, this.map.width, this.map.height);
 
     if (justArrived) {
+      if (this.map.getTile(this.player.tileX, this.player.tileY) === TileType.Door) {
+        this.game.scenes.push(
+          new StationScene(this.playerState, this.map, () => this.game.scenes.pop())
+        );
+        return;
+      }
+
       const site = checkEncounterTrigger(this.map, this.player.tileX, this.player.tileY);
       if (site) {
         const map = this.map;
