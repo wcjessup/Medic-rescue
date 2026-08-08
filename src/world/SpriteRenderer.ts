@@ -2,6 +2,34 @@ import type { Camera } from "./Camera.js";
 import type { Facing } from "../entities/Entity.js";
 import { TILE_SIZE } from "../utils/constants.js";
 
+export function drawCallSiteMarker(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  tileX: number,
+  tileY: number,
+  elapsedSeconds: number
+): void {
+  const px = tileX * TILE_SIZE - camera.x;
+  const py = tileY * TILE_SIZE - camera.y;
+  const bob = Math.sin(elapsedSeconds * 4) * 3;
+  const cx = px + TILE_SIZE / 2;
+  const cy = py + TILE_SIZE / 2 + bob - 6;
+
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(px + TILE_SIZE / 2, py + TILE_SIZE - 4, 8, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#e94560";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(cx - 1, cy - 5, 2, 10);
+  ctx.fillRect(cx - 5, cy - 1, 10, 2);
+}
+
 export interface DrawableEntity {
   pixelX: number;
   pixelY: number;

@@ -5,9 +5,11 @@ import { NPC } from "../entities/NPC.js";
 import { TileMap } from "../world/TileMap.js";
 import { Camera } from "../world/Camera.js";
 import { renderTileMap } from "../world/TileRenderer.js";
-import { drawPersonSprite } from "../world/SpriteRenderer.js";
+import { drawPersonSprite, drawCallSiteMarker } from "../world/SpriteRenderer.js";
 import { DialogueOverlay } from "./DialogueOverlay.js";
 import { dialogueScripts } from "../data/Dialogue.js";
+import type { PlayerState } from "../data/PlayerState.js";
+import { checkEncounterTrigger, triggerEncounter } from "../systems/EncounterSystem.js";
 
 const NPC_PALETTE = { body: "#4a7a4a", head: "#e0a878", accent: "#f1c40f" };
 
@@ -18,7 +20,7 @@ export class OverworldScene implements Scene {
   readonly npcs: NPC[];
   private elapsed = 0;
 
-  constructor(readonly map: TileMap, private game: Game) {
+  constructor(readonly map: TileMap, private game: Game, private playerState: PlayerState) {
     this.player = new Player(map.playerSpawn.tileX, map.playerSpawn.tileY);
     this.npcs = map.npcs.map((n) => new NPC(n.id, n.tileX, n.tileY, n.facing, n.dialogueId));
     this.camera.follow(this.player.pixelX, this.player.pixelY, map.width, map.height);
@@ -33,9 +35,7 @@ export class OverworldScene implements Scene {
 
     const script = dialogueScripts[npc.dialogueId];
     if (!script) return;
-    this.game.scenes.push(
-      new DialogueOverlay(script, () => this.game.scenes.pop())
-    );
+    this.game.scenes.push(new DialogueOverlay(script, () => this.game.scenes.pop()));
   }
 
   update(sc: SceneContext): void {
@@ -46,12 +46,30 @@ export class OverworldScene implements Scene {
       return;
     }
 
-    this.player.update(sc.dt, sc.input, this.map);
+    const justArrived = this.player.update(sc.dt, sc.input, this.map);
     this.camera.follow(this.player.pixelX, this.player.pixelY, this.map.width, this.map.height);
+
+    if (justArrived) {
+      const site = checkEncounterTrigger(this.map, this.player.tileX, this.player.tileY);
+      if (site) {
+        const map = this.map;
+        const game = this.game;
+        const playerState = this.playerState;
+        triggerEncounter(game, site, playerState, () => {
+          game.scenes.replace(new OverworldScene(map, game, playerState));
+        });
+      }
+    }
   }
 
   render(sc: SceneContext): void {
     renderTileMap(sc.ctx, this.map, this.camera, this.elapsed);
+
+    for (const site of this.map.callSites) {
+      if (!site.resolvedThisShift) {
+        drawCallSiteMarker(sc.ctx, this.camera, site.tileX, site.tileY, this.elapsed);
+      }
+    }
 
     const drawables: { pixelY: number; draw: () => void }[] = [
       { pixelY: this.player.pixelY, draw: () => drawPersonSprite(sc.ctx, this.camera, this.player) },
