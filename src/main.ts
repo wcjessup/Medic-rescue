@@ -10,7 +10,7 @@ const game = new Game(container);
 
 const title = new TitleScene((_continueGame) => {
   game.transition.fadeOut(() => {
-    game.scenes.replace(new OverworldScene(createTownMap()));
+    game.scenes.replace(new OverworldScene(createTownMap(), game));
   });
 }, false);
 

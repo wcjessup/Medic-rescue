@@ -38,7 +38,10 @@ export function createTownMap(): TileMap {
   return new TileMap({
     tiles: parseLayout(LAYOUT),
     playerSpawn: { tileX: 4, tileY: 4 },
-    npcs: [],
+    npcs: [
+      { id: "chief", tileX: 3, tileY: 3, facing: "down", dialogueId: "npc.chief" },
+      { id: "bystander", tileX: 10, tileY: 8, facing: "down", dialogueId: "npc.bystander" },
+    ],
     callSites: [],
   });
 }
