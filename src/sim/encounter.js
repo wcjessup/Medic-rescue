@@ -1,6 +1,7 @@
 import { formatClock } from "../core/clock.js";
 import { getMed } from "../data/meds.js";
 import { getEquipment } from "../data/equipment.js";
+import { PRIMARY_SURVEY_STEPS } from "./primarySurvey.js";
 
 let noteId = 0;
 
@@ -142,12 +143,40 @@ export class Encounter {
     return text;
   }
 
+  sceneAssessment(id) {
+    const def = this.caseDef.scene?.[id];
+    if (!def) return null;
+    const key = `scene:${id}`;
+    if (this.examDone.has(key)) return null;
+    this.examDone.add(key);
+    const text = typeof def.text === "function" ? def.text(this) : def.text;
+    this.addNote("scene", `[${def.label}] ${text}`);
+    this._tick(def.minutes ?? 0.5);
+    this._emit("scene", { id });
+    return text;
+  }
+
+  primarySurvey(id) {
+    const step = PRIMARY_SURVEY_STEPS.find((s) => s.id === id);
+    if (!step) return null;
+    const key = `primary:${id}`;
+    if (this.examDone.has(key)) return null;
+    this.examDone.add(key);
+    const text = typeof step.text === "function" ? step.text(this) : step.text;
+    this.addNote("primary", `[${step.label}] ${text}`);
+    this._tick(0.5);
+    this._emit("primary", { id });
+    return text;
+  }
+
   checkBGL() {
+    if (this.flags.bglChecked) return null;
     this._tick(getEquipment("bgl").minutes);
     this.flags.bglChecked = true;
     this.proceduresDone.bgl = { t: this.minutes };
     this.addNote("vitals", `BGL: ${this.vitals.bgl} mmol/L`);
     this._emit("bgl", { value: this.vitals.bgl });
+    return this.vitals.bgl;
   }
 
   // ---------------- procedures ----------------

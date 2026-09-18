@@ -14,6 +14,20 @@ export const leoAsthma = {
   dispatchText:
     "PRIORITY 1 — DIFFICULTY BREATHING\n5 year old male. Parents state known asthmatic, using blue puffer\nwithout relief for the last hour. Patient conscious, breathing\nfast. Address: 14 Wattle Court.\n\nNearest paediatric-capable ED: 11 minutes.",
   chiefComplaint: "Difficulty breathing",
+  historyRespondent: "Leo's Mum",
+
+  scene: {
+    danger: {
+      label: "Scene Safety",
+      keywords: ["danger", "dangerous", "hazard", "safe", "safety", "smell", "smoke", "gas"],
+      text: () => "Nothing hazardous — a normal lounge room. There's an empty Ventolin canister and a nebuliser mask on the coffee table. No smell of smoke or gas.",
+    },
+    impression: {
+      label: "General Impression",
+      keywords: ["general impression", "look at me", "walk in", "enter the room", "first look", "approach"],
+      text: () => "As you walk in, Leo is sitting bolt upright on his mum's lap, shoulders hunched forward, working visibly hard to breathe. He glances at you but is too breathless to say much.",
+    },
+  },
 
   baselineVitals: { hr: 150, sbp: 108, dbp: 66, rr: 44, spo2: 89, temp: 37.0, gcs: 15, etco2: 48, bgl: 5.4 },
   initialRhythm: "sinus-tach",
@@ -22,6 +36,9 @@ export const leoAsthma = {
   initialFlags: {},
 
   history: [
+    { id: "chief-complaint", category: "History", text: "What's going on today? Why did you call the ambulance?", minutes: 0.5,
+      keywords: ["what's going on", "whats going on", "why did you call", "what happened", "what's wrong", "whats wrong", "what's the matter", "tell me what", "my name is", "im the paramedic", "i'm the paramedic"],
+      answer: () => "He's really struggling to breathe — his puffer isn't touching it. Please help him!" },
     { id: "onset", category: "History", text: "When did the breathing trouble start?", minutes: 0.5,
       answer: () => "Started coughing about 2 hours ago, got a lot worse in the last 30 minutes despite his puffer." },
     { id: "trigger", category: "History", text: "Any trigger — cold, exercise, new allergen?", minutes: 0.5,
@@ -42,13 +59,17 @@ export const leoAsthma = {
 
   exam: {
     head: { label: "Head / Face", findings: [
-      { type: "inspect", label: "Inspect", minutes: 1, text: () => "Alert, anxious, mouth breathing. Can only manage 2-3 words per breath." },
+      { type: "inspect", label: "Inspect", minutes: 1,
+        keywords: ["words or sentences", "talking in sentences", "speak in sentences", "how is he talking", "can he talk", "full sentences"],
+        text: () => "Alert, anxious, mouth breathing. Can only manage 2-3 words per breath." },
     ]},
     neck: { label: "Neck", findings: [
       { type: "inspect", label: "Inspect", minutes: 1, text: () => "Visible tracheal tug with every breath. No stridor at rest." },
     ]},
     chest: { label: "Chest", findings: [
-      { type: "inspect", label: "Inspect", minutes: 1, text: () => "Marked subcostal and intercostal recession, tripod positioning, obvious accessory muscle use." },
+      { type: "inspect", label: "Inspect", minutes: 1,
+        keywords: ["accessory muscle", "tripod", "tripoding", "recession", "retraction", "how do they appear", "how does he appear", "working hard to breathe", "posture"],
+        text: () => "Marked subcostal and intercostal recession, tripod positioning, obvious accessory muscle use." },
       { type: "palpate", label: "Palpate", minutes: 1, text: () => "Symmetrical chest wall movement with significant work of breathing. No crepitus, no flail segment." },
       { type: "auscultate", label: "Auscultate", minutes: 1, text: (s) => s.arrested ? "No air entry audible — chest silent." : "Diffuse expiratory wheeze throughout all fields, prolonged expiratory phase, reduced air entry at both bases." },
     ]},
@@ -180,13 +201,16 @@ export const leoAsthma = {
   ],
 
   rubric: {
-    requiredHistory: ["onset", "past-admissions", "meds", "ventolin-today"],
-    requiredExam: ["chest:auscultate", "chest:inspect", "neck:inspect", "special:wob-score"],
+    requiredHistory: ["chief-complaint", "onset", "past-admissions", "meds", "ventolin-today"],
+    requiredExam: ["chest:auscultate", "chest:inspect", "neck:inspect", "special:wob-score", "scene:danger", "primary:airway", "primary:breathing"],
     examLabels: {
       "chest:auscultate": "Auscultate chest",
       "chest:inspect": "Inspect chest / work of breathing",
       "neck:inspect": "Inspect neck for tracheal tug/stridor",
       "special:wob-score": "Formal work-of-breathing assessment",
+      "scene:danger": "Check the scene for danger",
+      "primary:airway": "Primary survey — airway",
+      "primary:breathing": "Primary survey — breathing",
     },
     minVitalsChecks: 2,
     timeParMinutes: 22,

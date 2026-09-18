@@ -12,6 +12,20 @@ export const belindaVtArrest = {
   dispatchText:
     "PRIORITY 2 — UNWELL PERSON\n70 year old female, feeling generally weak and lethargic for a few\ndays. Daughter called because she seemed 'not herself'. Patient\nconscious, sitting in an armchair. Address: 8 Banksia Rise.\n\nNearest ED: 9 minutes.",
   chiefComplaint: "Generalised weakness/lethargy",
+  historyRespondent: "Belinda",
+
+  scene: {
+    danger: {
+      label: "Scene Safety",
+      keywords: ["danger", "dangerous", "hazard", "safe", "safety", "smell", "smoke", "gas"],
+      text: () => "Nothing hazardous — a tidy lounge room. Her daughter is nearby and looks worried but is out of your way.",
+    },
+    impression: {
+      label: "General Impression",
+      keywords: ["general impression", "look at me", "walk in", "enter the room", "first look", "approach"],
+      text: () => "Belinda is slumped a little in her armchair, pale, and gives you only a slow, tired glance as you enter — she doesn't get up.",
+    },
+  },
 
   baselineVitals: { hr: 104, sbp: 118, dbp: 72, rr: 18, spo2: 97, temp: 36.5, gcs: 15, etco2: 35, bgl: 6.1 },
   initialRhythm: "sinus-tach",
@@ -20,6 +34,9 @@ export const belindaVtArrest = {
   initialFlags: { kLevel: 2.6 },
 
   history: [
+    { id: "chief-complaint", category: "History", text: "Hi, I'm your paramedic — what's going on today?", minutes: 0.5,
+      keywords: ["what's going on", "whats going on", "why did you call", "what happened", "what's wrong", "whats wrong", "what's the matter", "tell me what", "my name is", "im the paramedic", "i'm the paramedic"],
+      answer: () => "I just haven't been myself for days... I feel so weak, I could barely stand up when you arrived." },
     { id: "onset", category: "History", text: "When did you start feeling unwell?", minutes: 0.5,
       answer: () => "About three days ago now — I've just felt weaker and weaker." },
     { id: "dv", category: "History", text: "Any vomiting or diarrhoea?", minutes: 0.5,
@@ -198,13 +215,15 @@ export const belindaVtArrest = {
   ],
 
   rubric: {
-    requiredHistory: ["dv", "travel", "ventolin-use", "past-meds"],
-    requiredExam: ["abdomen:palpate", "leftHand:inspect", "special:skin-turgor", "special:muscle-strength"],
+    requiredHistory: ["chief-complaint", "dv", "travel", "ventolin-use", "past-meds"],
+    requiredExam: ["abdomen:palpate", "leftHand:inspect", "special:skin-turgor", "special:muscle-strength", "scene:danger", "primary:circulation"],
     examLabels: {
       "abdomen:palpate": "Palpate abdomen",
       "leftHand:inspect": "Inspect hand (skin turgor/tremor)",
       "special:skin-turgor": "Formal skin turgor check",
       "special:muscle-strength": "Assess limb muscle strength",
+      "scene:danger": "Check the scene for danger",
+      "primary:circulation": "Primary survey — circulation",
     },
     minVitalsChecks: 3,
     timeParMinutes: 18,

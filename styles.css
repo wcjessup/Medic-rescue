@@ -267,6 +267,57 @@ canvas {
 
 .section-label { color: var(--ink-dim); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; margin: 10px 0 4px; }
 
+/* ---------------- chat / talk tab ---------------- */
+.chat-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  min-height: 120px;
+}
+.chat-msg { display: flex; flex-direction: column; max-width: 92%; }
+.chat-msg.me { align-self: flex-end; align-items: flex-end; }
+.chat-msg.them { align-self: flex-start; align-items: flex-start; }
+.chat-msg.narrator { align-self: flex-start; align-items: flex-start; max-width: 100%; }
+.chat-msg.system { align-self: center; align-items: center; max-width: 100%; }
+.chat-speaker { font-size: 9px; letter-spacing: 1px; color: var(--ink-dim); margin-bottom: 2px; }
+.chat-bubble {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border: 1px solid #2e2e28;
+  background: #141410;
+  white-space: pre-wrap;
+}
+.chat-msg.me .chat-bubble { background: #10200f; border-color: var(--accent-dim); color: var(--accent); }
+.chat-msg.narrator .chat-bubble { font-style: italic; color: var(--ink-dim); border-style: dashed; background: transparent; }
+.chat-msg.system .chat-bubble { font-size: 10px; color: var(--warn); border-color: var(--warn); background: transparent; padding: 4px 8px; }
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0; flex: 0 0 auto; }
+.chip {
+  font-family: var(--font);
+  background: #141410;
+  color: var(--ink-dim);
+  border: 1px solid var(--panel-border);
+  padding: 5px 9px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.chip:hover { color: var(--accent); border-color: var(--accent-dim); }
+.chat-input-row { display: flex; gap: 6px; flex: 0 0 auto; padding-top: 4px; border-top: 2px solid var(--panel-border); }
+.chat-input {
+  flex: 1 1 auto;
+  background: #0a0a08;
+  color: var(--ink);
+  border: 1px solid var(--panel-border);
+  padding: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+}
+.chat-input:focus { outline: none; border-color: var(--accent-dim); }
+
 /* ---------------- modal ---------------- */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.75);

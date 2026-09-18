@@ -14,6 +14,20 @@ export const billDissection = {
   dispatchText:
     "PRIORITY 1 — CHEST PAIN\n55 year old male, chest pain, at a factory workshop. Colleagues\nstate he was working in a confined space when the pain started.\nPatient conscious, sitting against a wall. Address: 2 Industrial\nWay, Unit 6.\n\nNearest ED (cardiothoracic/vascular surgery): 14 minutes.",
   chiefComplaint: "Chest / back pain",
+  historyRespondent: "Bill",
+
+  scene: {
+    danger: {
+      label: "Scene Safety",
+      keywords: ["danger", "dangerous", "hazard", "safe", "safety", "smell", "smoke", "gas", "confined"],
+      text: () => "It's a tight, metal-walled workshop bay — mind the low gantry crane overhead and an extension cord underfoot. Genuinely a confined space, but no smoke, gas smell or electrical hazard obvious right now. A colleague is standing by.",
+    },
+    impression: {
+      label: "General Impression",
+      keywords: ["general impression", "look at me", "walk in", "enter the room", "first look", "approach"],
+      text: () => "Bill is sitting on the floor against the wall, clutching his chest, grey and sweaty — he looks up at you with obvious fear in his eyes as you approach.",
+    },
+  },
 
   baselineVitals: { hr: 108, sbp: 158, dbp: 96, rr: 22, spo2: 96, temp: 36.8, gcs: 15, etco2: 34, bgl: 6.4 },
   initialRhythm: "sinus-tach",
@@ -22,6 +36,9 @@ export const billDissection = {
   initialFlags: { sbpRight: 158, sbpLeft: 104, dissectionMin: 0 },
 
   history: [
+    { id: "chief-complaint", category: "History", text: "Hi, I'm your paramedic — what's going on today?", minutes: 0.5,
+      keywords: ["what's going on", "whats going on", "why did you call", "what happened", "what's wrong", "whats wrong", "what's the matter", "tell me what", "my name is"],
+      answer: () => "It's my chest... it just tore into me all of a sudden. Worst pain of my life." },
     { id: "onset", category: "History", text: "When exactly did the pain start, and how suddenly?", minutes: 0.5,
       answer: () => "Very sudden, maybe 20 minutes ago — like nothing I've felt before, hit me all at once." },
     { id: "quality", category: "History", text: "Can you describe the pain?", minutes: 0.5,
@@ -161,13 +178,15 @@ export const billDissection = {
   ],
 
   rubric: {
-    requiredHistory: ["onset", "quality", "radiation", "cardiac-hx"],
-    requiredExam: ["leftArm:palpate", "rightArm:palpate", "special:compare-bp-both-arms", "special:pulse-deficit-check"],
+    requiredHistory: ["chief-complaint", "onset", "quality", "radiation", "cardiac-hx"],
+    requiredExam: ["leftArm:palpate", "rightArm:palpate", "special:compare-bp-both-arms", "special:pulse-deficit-check", "scene:danger", "primary:circulation"],
     examLabels: {
       "leftArm:palpate": "Palpate left arm pulse",
       "rightArm:palpate": "Palpate right arm pulse",
       "special:compare-bp-both-arms": "Compare BP both arms",
       "special:pulse-deficit-check": "Formal four-limb pulse check",
+      "scene:danger": "Check the scene for danger",
+      "primary:circulation": "Primary survey — circulation",
     },
     minVitalsChecks: 2,
     timeParMinutes: 15,

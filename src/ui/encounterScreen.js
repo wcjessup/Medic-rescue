@@ -1,19 +1,21 @@
 import { Encounter } from "../sim/encounter.js";
 import { MEDS, getMed } from "../data/meds.js";
 import { EQUIPMENT, getEquipment } from "../data/equipment.js";
-import { drawPatient, hitTestPatient, REGIONS } from "../render/patientSprite.js";
+import { drawPatient, hitTestPatient } from "../render/patientSprite.js";
 import { drawMonitor } from "../render/monitor.js";
 import { audio } from "../audio/audio.js";
 import { openModal, closeModal, toast } from "./modal.js";
+import { buildTopics, matchInput } from "../sim/nlu.js";
 
 const TABS = [
-  { id: "history", label: "History" },
-  { id: "exam", label: "Exam" },
+  { id: "talk", label: "Talk" },
   { id: "vitals", label: "Vitals" },
   { id: "kit", label: "Kit Bag" },
   { id: "procedures", label: "Procedures" },
   { id: "diagnosis", label: "Diagnosis" },
 ];
+
+const EXAM_VERBS = { inspect: "look at", palpate: "feel", auscultate: "listen to" };
 
 let els = null;
 let encounter = null;
@@ -63,8 +65,9 @@ export function initEncounterScreen() {
 
 export function startEncounter(caseDef, onFinish) {
   encounter = new Encounter(caseDef);
+  encounter.chatLog = [{ speaker: "system", text: "You arrive on scene." }];
   onFinishCb = onFinish;
-  activeTab = "history";
+  activeTab = "talk";
   selectedRegion = null;
   els.hudCaseName.textContent = `${caseDef.name}, ${caseDef.age}${caseDef.sex} — ${caseDef.chiefComplaint}`;
   audio.startMusic();
@@ -111,7 +114,7 @@ function renderAll() {
 }
 
 function renderNotepad() {
-  const CAT_LABEL = { dispatch: "DISPATCH", history: "HX", exam: "EXAM", vitals: "OBS", procedure: "PROC", treatment: "RX", event: "!" };
+  const CAT_LABEL = { dispatch: "DISPATCH", history: "HX", exam: "EXAM", vitals: "OBS", procedure: "PROC", treatment: "RX", event: "!", scene: "SCENE", primary: "SURVEY" };
   if (!encounter.notepad.length) {
     els.notepadEntries.innerHTML = `<p class="empty">Nothing charted yet.</p>`;
     return;
@@ -191,10 +194,8 @@ function renderTabBar() {
 function renderTabContent() {
   if (encounter.ended) return;
   switch (activeTab) {
-    case "history":
-      return renderHistoryTab();
-    case "exam":
-      return renderExamTab();
+    case "talk":
+      return renderTalkTab();
     case "vitals":
       return renderVitalsTab();
     case "kit":
@@ -206,61 +207,112 @@ function renderTabContent() {
   }
 }
 
-function renderHistoryTab() {
-  const byCat = {};
-  for (const q of encounter.caseDef.history) {
-    (byCat[q.category] ||= []).push(q);
+function speakerMeta(speaker) {
+  switch (speaker) {
+    case "you":
+      return { label: "YOU", cls: "me" };
+    case "patient":
+      return { label: (encounter.caseDef.historyRespondent || "Patient").toUpperCase(), cls: "them" };
+    case "partner":
+      return { label: "PARTNER", cls: "them" };
+    case "exam":
+      return { label: "YOU OBSERVE", cls: "narrator" };
+    default:
+      return { label: "", cls: "system" };
   }
-  let html = "";
-  for (const [cat, qs] of Object.entries(byCat)) {
-    html += `<div class="section-label">${cat}</div>`;
-    html += qs
-      .map((q) => {
-        const done = encounter.historyAsked.has(q.id);
-        return `<button class="list-btn${done ? " done" : ""}" data-role="ask-history" data-qid="${q.id}" ${done ? "disabled" : ""}>
-          <div class="lb-title">${escapeHtml(q.text)}</div>
-          ${done ? `<div class="lb-sub">Asked</div>` : ""}
-        </button>`;
-      })
-      .join("");
-  }
-  els.tabContent.innerHTML = html;
 }
 
-function renderExamTab() {
-  let html = `<div class="section-label">Click a region on the patient to examine it</div>`;
-  if (selectedRegion) {
-    const region = encounter.caseDef.exam[selectedRegion];
-    html += `<div class="section-label">${REGIONS[selectedRegion]?.label || selectedRegion}</div>`;
-    if (region) {
-      html += region.findings
-        .map((f) => {
-          const key = `${selectedRegion}:${f.type}`;
-          const done = encounter.examDone.has(key);
-          return `<button class="list-btn${done ? " done" : ""}" data-role="exam-type" data-region="${selectedRegion}" data-type="${f.type}" ${done ? "disabled" : ""}>
-            <div class="lb-title">${f.label}</div>
-            ${done ? `<div class="lb-sub">Done</div>` : ""}
-          </button>`;
-        })
-        .join("");
-    } else {
-      html += `<p class="lb-sub">Nothing notable to find here.</p>`;
+function renderChatBubble(entry) {
+  const meta = speakerMeta(entry.speaker);
+  return `<div class="chat-msg ${meta.cls}">${meta.label ? `<div class="chat-speaker">${meta.label}</div>` : ""}<div class="chat-bubble">${escapeHtml(entry.text)}</div></div>`;
+}
+
+function buildChipsHtml() {
+  const chips = [];
+  const cd = encounter.caseDef;
+  if (cd.history.some((h) => h.id === "chief-complaint") && !encounter.historyAsked.has("chief-complaint")) {
+    chips.push({ label: "Introduce yourself", text: "Hi, I'm your paramedic — what's going on today?" });
+  }
+  if (cd.scene?.danger && !encounter.examDone.has("scene:danger")) {
+    chips.push({ label: "Check for danger", text: "Do I see, hear or smell anything dangerous?" });
+  }
+  if (cd.scene?.impression && !encounter.examDone.has("scene:impression")) {
+    chips.push({ label: "General impression", text: "As I walk in, what's my general impression? Does the patient look at me?" });
+  }
+  if (selectedRegion && cd.exam[selectedRegion]) {
+    const region = cd.exam[selectedRegion];
+    for (const f of region.findings) {
+      const key = `${selectedRegion}:${f.type}`;
+      if (encounter.examDone.has(key)) continue;
+      chips.push({ label: `${f.label} — ${region.label}`, text: `I ${EXAM_VERBS[f.type] || f.type} the ${region.label.toLowerCase()}.` });
     }
   }
-  const specials = encounter.caseDef.specialAssessments || [];
-  if (specials.length) {
-    html += `<div class="section-label">Special Assessments</div>`;
-    html += specials
-      .map((s) => {
-        const done = encounter.examDone.has(`special:${s.id}`);
-        return `<button class="list-btn${done ? " done" : ""}" data-role="special" data-id="${s.id}" ${done ? "disabled" : ""}>
-          <div class="lb-title">${s.label}</div>
-          ${done ? `<div class="lb-sub">Done</div>` : ""}
-        </button>`;
-      })
-      .join("");
+  chips.push({ label: "Get vitals", text: "Can you get a full set of vitals, please — priority on SpO2." });
+  return chips.map((c) => `<button class="chip" data-role="chip" data-text="${escapeHtml(c.text)}">${escapeHtml(c.label)}</button>`).join("");
+}
+
+function renderTalkTab() {
+  const messagesHtml = encounter.chatLog.map(renderChatBubble).join("");
+  els.tabContent.innerHTML = `
+    <div class="chat-root">
+      <div class="chat-messages" id="chat-messages">${messagesHtml}</div>
+      <div class="chat-chips" id="chat-chips">${buildChipsHtml()}</div>
+      <form class="chat-input-row" id="chat-form">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question, or say what you're doing…" autocomplete="off" />
+        <button type="submit" class="btn btn-small">SEND</button>
+      </form>
+    </div>
+  `;
+  const msgsEl = document.getElementById("chat-messages");
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+  document.getElementById("chat-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("chat-input");
+    const text = input.value;
+    input.value = "";
+    sendChat(text);
+  });
+}
+
+function formatVitalsSnapshot(snap) {
+  return `Righto, checking now... Obs are: HR ${snap.hr ?? "not on the monitor yet"}, BP ${snap.sbp}/${snap.dbp}, resp rate ${snap.rr}, sats ${snap.spo2 ?? "no probe on yet"}${snap.spo2 !== null ? "%" : ""}, temp ${snap.temp}°C, GCS ${snap.gcs}.`;
+}
+
+function sendChat(rawText) {
+  const text = (rawText || "").trim();
+  if (!text || !encounter || encounter.ended) return;
+  encounter.chatLog.push({ speaker: "you", text });
+  audio.click();
+
+  const topics = buildTopics(encounter.caseDef, encounter, selectedRegion);
+  const match = matchInput(text, topics);
+
+  if (!match) {
+    encounter.chatLog.push({ speaker: "system", text: "Not sure what you mean — try asking about the scene, their history, or describing what you're examining." });
+    audio.error();
+    renderAll();
+    return;
   }
-  els.tabContent.innerHTML = html;
+
+  const result = match.run();
+  if (result === null || result === undefined) {
+    encounter.chatLog.push({ speaker: "system", text: "(You already covered that.)" });
+    renderAll();
+    return;
+  }
+
+  let speaker = "exam";
+  let bubbleText = result;
+  if (match.kind === "history") speaker = "patient";
+  else if (match.kind === "vitals" && match.id === "take") {
+    speaker = "partner";
+    bubbleText = formatVitalsSnapshot(result);
+  } else if (match.kind === "vitals" && match.id === "bgl") {
+    bubbleText = `Blood glucose: ${result} mmol/L.`;
+  }
+  encounter.chatLog.push({ speaker, text: bubbleText });
+  audio.confirm();
+  renderAll();
 }
 
 function renderVitalsTab() {
@@ -363,7 +415,7 @@ function handlePatientClick(e) {
   const region = hitTestPatient(els.patientCanvas, e);
   if (!region) return;
   selectedRegion = region;
-  activeTab = "exam";
+  activeTab = "talk";
   audio.click();
   renderTabBar();
   renderTabContent();
@@ -374,18 +426,8 @@ function handleTabContentClick(e) {
   if (!btn || btn.disabled) return;
   const role = btn.dataset.role;
 
-  if (role === "ask-history") {
-    encounter.askHistory(btn.dataset.qid);
-    audio.confirm();
-    renderAll();
-  } else if (role === "exam-type") {
-    encounter.examine(btn.dataset.region, btn.dataset.type);
-    audio.confirm();
-    renderAll();
-  } else if (role === "special") {
-    encounter.performSpecial(btn.dataset.id);
-    audio.confirm();
-    renderAll();
+  if (role === "chip") {
+    sendChat(btn.dataset.text);
   } else if (role === "take-vitals") {
     encounter.takeVitals();
     audio.confirm();

@@ -1,12 +1,14 @@
 # Paramedic — a patient assessment simulator
 
 A black-and-white, 8-bit-styled browser game where you play a paramedic
-running a full patient encounter: take a history, examine the patient
-region by region, attach a monitor and take your own vital signs, treat
-from a kit bag that won't let you cheat (exact drug, exact dose, exact
-route, IV drugs locked out until you've actually got IV access), then
-commit to a provisional diagnosis and a disposition. You're graded on all
-of it afterwards.
+running a full patient encounter OSCE-exam style: nothing is handed to
+you, you get it by typing free-text questions into a live chat with the
+scene — the patient, a bystander, your partner or your own eyes reply in
+character. You attach a monitor and take your own vital signs, treat from
+a kit bag that won't let you cheat (exact drug, exact dose, exact route,
+IV drugs locked out until you've actually got IV access), then commit to
+a provisional diagnosis and a disposition. You're graded on all of it
+afterwards.
 
 Everything is generated in code — there are **no image, audio, video or
 font files anywhere in this repo**. The patient sprite and ECG waveform are
@@ -33,12 +35,21 @@ browser.
 - **Monitor (top centre)** shows a live ECG rhythm once you attach the
   leads, but every number (BP, RR, temp, GCS, SpO2 before the probe is on)
   stays blank until you actually perform that check.
-- **Click the patient** to examine a body region — choose to inspect,
-  palpate or auscultate depending on what's available there.
-- **HISTORY** — ask SAMPLE/OPQRST-style questions one at a time.
-- **VITALS** — perform a full obs check; each one is timestamped into the
-  **Vitals Trend** table at the bottom so you can watch the patient trend
-  over the course of the job.
+- **TALK** is the primary way you gather everything — a chat box, not a
+  menu. Type free text the way you'd actually speak on scene: "do I see,
+  hear or smell any danger?", "hi, I'm your paramedic, what's going on
+  today?", "are they using accessory muscles?", "can you get a set of
+  vitals, priority on SpO2?" — and get an in-character reply. There's no
+  fixed script; a lightweight keyword matcher (no external AI call, works
+  fully offline) maps what you type onto the closest thing it could mean
+  for this patient. If it can't tell, it says so — try rephrasing, or tap
+  one of the suggestion chips, which just send a canonical phrasing
+  through the same chat pipeline (not a hidden answer key).
+- **Click the patient** to focus a body region — chips appear offering to
+  inspect/palpate/auscultate it, or type what you're doing to it directly
+  ("I feel his pulse", "I listen to his chest").
+- **VITALS** tab shows the same trend table plus reliable one-tap buttons
+  for a full obs check and a BGL, if you'd rather not type it.
 - **KIT BAG** — pick a drug, its concentration (where relevant), a dose,
   and a route. Routes that need IV/IO access are greyed out and locked
   until you've actually cannulated the patient. Nothing stops you from
@@ -90,6 +101,8 @@ src/audio/audio.js           procedural WebAudio SFX + music engine
 src/render/patientSprite.js  canvas-drawn paper-doll patient + clickable body regions
 src/render/monitor.js        canvas-drawn scrolling ECG waveform per rhythm
 src/sim/encounter.js         the encounter state machine (chart, exam, vitals, meds, procedures, time)
+src/sim/nlu.js                offline keyword/phrase matcher behind the TALK chat
+src/sim/primarySurvey.js     generic DRABCD primary-survey text, derived from live physiology
 src/sim/scoring.js           rubric-driven grading engine
 src/data/meds.js             the shared paramedic kit bag (drugs, concentrations, doses, routes)
 src/data/equipment.js        procedures (IV/IO, monitor, airway, defib, CPR...)
@@ -108,3 +121,11 @@ This is a game, not a clinical calculator — a few deliberate simplifications:
   not how fast).
 - Only the three cases above are implemented; the case-select screen and
   scoring engine are built to take more without engine changes.
+- The chat's "understanding" (`src/sim/nlu.js`) is a deterministic,
+  offline keyword/phrase matcher, not a language model — it was chosen
+  deliberately so the game behaves identically whether it's opened locally
+  or as a hosted artifact, with no network call and no API key. It's
+  generous by design (a broad match beats a dead end), so it can
+  occasionally answer a different, related question than the one you
+  meant to ask — rephrase, mention the body part by name, or use a chip if
+  that happens.
