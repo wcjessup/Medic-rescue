@@ -2,15 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Paramedic Rescue (dev)</title>
-<style>
-  html, body { margin: 0; padding: 0; background: #000; overscroll-behavior: none; }
-  #app { width: 100vw; height: 100dvh; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PARAMEDIC // patient assessment sim</title>
+<link rel="stylesheet" href="/styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230a0a0a'/%3E%3Cpath d='M1 8h3l1.5-4 2 8 1.5-6 1 2h5' stroke='%233ff23f' stroke-width='1.3' fill='none'/%3E%3C/svg%3E" />
 </head>
 <body>
-<div id="app"></div>
-<script src="/dist/dev/bundle.js"></script>
+<div id="app">
+
+  <!-- ===================== TITLE ===================== -->
+  <section id="screen-title" class="screen">
+    <div class="crt">
+      <pre class="ascii-logo" aria-hidden="true"></pre>
+      <h1 class="title-text">PARAMEDIC</h1>
+      <p class="subtitle">a patient assessment simulator</p>
+      <div class="title-menu">
+        <button class="btn btn-big" data-action="start">NEW SHIFT</button>
+        <button class="btn" data-action="how-to-play">HOW TO PLAY</button>
+        <label class="audio-toggle">
+          <input type="checkbox" id="audio-toggle" checked />
+          <span>SOUND ON</span>
+        </label>
+      </div>
+      <p class="blink">PRESS NEW SHIFT TO BEGIN</p>
+    </div>
+  </section>
+
+  <!-- ===================== HOW TO PLAY ===================== -->
+  <section id="screen-howto" class="screen hidden">
+    <div class="panel-window howto-window">
+      <h2>HOW TO PLAY</h2>
+      <div class="howto-body">
+        <p><strong>You are a paramedic.</strong> Dispatch gives you almost nothing. Everything else you have to find out yourself.</p>
+        <ul>
+          <li><strong>Notepad</strong> (left) is your running chart. Nothing appears there unless you go get it.</li>
+          <li><strong>Monitor</strong> shows a live rhythm once you attach leads, but numbers stay blank until you actually check each vital.</li>
+          <li><strong>Click the patient</strong> to examine body regions. Choose HISTORY to ask questions, EXAM for physical findings, VITALS to take readings, KIT to give treatment, PROCEDURES for access/airway/monitor/defib.</li>
+          <li><strong>The kit bag is unforgiving.</strong> You must pick the exact drug, concentration, dose and route. IV/IO drugs are locked out until you've established access. Wrong choices can hurt the patient.</li>
+          <li>When you're ready, open <strong>DIAGNOSIS</strong> to commit to a provisional diagnosis and a disposition (stay home, GP referral, transport priority, hospital type, or ceasing resuscitation). That ends the case and you're graded.</li>
+        </ul>
+      </div>
+      <button class="btn" data-action="back-to-title">BACK</button>
+    </div>
+  </section>
+
+  <!-- ===================== CASE SELECT ===================== -->
+  <section id="screen-caseselect" class="screen hidden">
+    <header class="bar">
+      <h2>DISPATCH QUEUE</h2>
+      <button class="btn btn-small" data-action="back-to-title">◀ BACK</button>
+    </header>
+    <div id="case-list" class="case-list"></div>
+  </section>
+
+  <!-- ===================== BRIEFING ===================== -->
+  <section id="screen-briefing" class="screen hidden">
+    <div class="panel-window briefing-window">
+      <h2 id="briefing-title">DISPATCH</h2>
+      <pre id="briefing-text" class="dispatch-text"></pre>
+      <div class="briefing-actions">
+        <button class="btn btn-big" data-action="respond">RESPOND</button>
+        <button class="btn" data-action="back-to-caseselect">◀ QUEUE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ENCOUNTER ===================== -->
+  <section id="screen-encounter" class="screen hidden">
+    <header id="hud" class="bar">
+      <div class="hud-left">
+        <span id="hud-case-name">—</span>
+        <span id="hud-clock" class="mono">00:00</span>
+      </div>
+      <div class="hud-right">
+        <button class="btn btn-small" id="btn-diagnosis" data-action="open-diagnosis">END CALL / DIAGNOSIS</button>
+        <button class="btn btn-small" data-action="mute">🔊</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT: NOTEPAD -->
+      <aside id="notepad" class="panel-window">
+        <h3>CHART</h3>
+        <div id="notepad-entries" class="notepad-entries"></div>
+      </aside>
+
+      <!-- CENTER: MONITOR + PATIENT + TREND -->
+      <main id="stage">
+        <div id="monitor-panel" class="panel-window monitor">
+          <canvas id="monitor-canvas" width="520" height="150"></canvas>
+          <div id="monitor-digits" class="monitor-digits"></div>
+        </div>
+
+        <div id="patient-panel" class="panel-window">
+          <canvas id="patient-canvas" width="260" height="320"></canvas>
+          <p id="patient-status-line" class="mono small"></p>
+        </div>
+
+        <div id="trend-panel" class="panel-window">
+          <h3>VITALS TREND</h3>
+          <div class="trend-scroll">
+            <table id="trend-table">
+              <thead><tr id="trend-head"><th>time</th></tr></thead>
+              <tbody id="trend-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT: ACTION TABS -->
+      <aside id="action-panel" class="panel-window">
+        <div id="action-tabs" class="tabs"></div>
+        <div id="tab-content" class="tab-content"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== DEBRIEF ===================== -->
+  <section id="screen-debrief" class="screen hidden">
+    <div class="panel-window debrief-window">
+      <h2>SHIFT DEBRIEF</h2>
+      <div id="debrief-body"></div>
+      <div class="briefing-actions">
+        <button class="btn btn-big" data-action="back-to-caseselect">NEXT DISPATCH</button>
+        <button class="btn" data-action="back-to-title">TITLE</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
