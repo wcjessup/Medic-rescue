@@ -1,14 +1,15 @@
 # Paramedic — a patient assessment simulator
 
-A black-and-white, 8-bit-styled browser game where you play a paramedic
-running a full patient encounter OSCE-exam style: nothing is handed to
-you, you get it by typing free-text questions into a live chat with the
-scene — the patient, a bystander, your partner or your own eyes reply in
-character. You attach a monitor and take your own vital signs, treat from
-a kit bag that won't let you cheat (exact drug, exact dose, exact route,
-IV drugs locked out until you've actually got IV access), then commit to
-a provisional diagnosis and a disposition. You're graded on all of it
-afterwards.
+A clean, light browser game where you play a paramedic running a full
+patient encounter OSCE-exam style: nothing is handed to you, you get it
+by typing free-text questions into a live chat with the scene — the
+patient/a bystander answers history questions in character, and a blind
+"examiner" who holds the case notes (but can't see the room) tells you
+what an exam would find once you clearly describe the technique. You
+attach a monitor and take your own vital signs, treat from a kit bag that
+won't let you cheat (exact drug, exact dose, exact route, IV drugs locked
+out until you've actually got IV access), then commit to a provisional
+diagnosis and a disposition. You're graded on all of it afterwards.
 
 Everything is generated in code — there are **no image, audio, video or
 font files anywhere in this repo**. The patient sprite and ECG waveform are
@@ -39,12 +40,16 @@ browser.
   menu. Type free text the way you'd actually speak on scene: "do I see,
   hear or smell any danger?", "hi, I'm your paramedic, what's going on
   today?", "are they using accessory muscles?", "can you get a set of
-  vitals, priority on SpO2?" — and get an in-character reply. There's no
-  fixed script; a lightweight keyword matcher (no external AI call, works
-  fully offline) maps what you type onto the closest thing it could mean
-  for this patient. If it can't tell, it says so — try rephrasing, or tap
-  one of the suggestion chips, which just send a canonical phrasing
-  through the same chat pipeline (not a hidden answer key).
+  vitals, priority on SpO2?" Two characters answer: the **patient** (or a
+  bystander) speaks for themselves on history questions, and the
+  **examiner** — who holds the case notes but can't see the room — tells
+  you what an exam would find only once you clearly describe the
+  technique, exactly like a real OSCE. There's no fixed script; a
+  lightweight keyword matcher (no external AI call, works fully offline)
+  maps what you type onto the closest thing it could mean for this
+  patient. If it can't tell, it says so — try rephrasing, or tap one of
+  the suggestion chips, which just send a canonical phrasing through the
+  same chat pipeline (not a hidden answer key).
 - **Click the patient** to focus a body region — chips appear offering to
   inspect/palpate/auscultate it, or type what you're doing to it directly
   ("I feel his pulse", "I listen to his chest").
@@ -95,7 +100,7 @@ template doesn't require touching the engine.
 ## Project structure
 
 ```
-index.html / styles.css      shell + monochrome 8-bit theme
+index.html / styles.css      shell + light, sleek theme (device screens stay dark)
 src/main.js                  screen routing (title → case select → briefing → encounter → debrief)
 src/audio/audio.js           procedural WebAudio SFX + music engine
 src/render/patientSprite.js  canvas-drawn paper-doll patient + clickable body regions

@@ -101,7 +101,7 @@ export function drawMonitor(canvas, encounter, opts = {}) {
   ctx.clearRect(0, 0, w, h);
 
   // grid
-  ctx.strokeStyle = "#0e2a0e";
+  ctx.strokeStyle = "#241f16";
   ctx.lineWidth = 1;
   for (let gx = 0; gx < w; gx += 20) {
     ctx.beginPath();
@@ -117,8 +117,8 @@ export function drawMonitor(canvas, encounter, opts = {}) {
   }
 
   if (!encounter.monitorAttached) {
-    ctx.fillStyle = "#245524";
-    ctx.font = "13px monospace";
+    ctx.fillStyle = "#3a4a3f";
+    ctx.font = "13px ui-monospace, monospace";
     ctx.textAlign = "center";
     ctx.fillText("NO SIGNAL — ATTACH MONITOR", w / 2, h / 2);
     return;
@@ -129,7 +129,7 @@ export function drawMonitor(canvas, encounter, opts = {}) {
   const msPerPixel = 4;
   const cursor = opts.t || 0;
 
-  ctx.strokeStyle = "#3ff23f";
+  ctx.strokeStyle = "#4ade80";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let x = 0; x < w; x++) {
@@ -142,6 +142,6 @@ export function drawMonitor(canvas, encounter, opts = {}) {
   ctx.stroke();
 
   // sweep cursor glow
-  ctx.fillStyle = "rgba(63,242,63,0.5)";
+  ctx.fillStyle = "rgba(74,222,128,0.5)";
   ctx.fillRect(w - 3, 0, 3, h);
 }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PARAMEDIC // patient assessment sim</title>
 <link rel="stylesheet" href="/styles.css" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230a0a0a'/%3E%3Cpath d='M1 8h3l1.5-4 2 8 1.5-6 1 2h5' stroke='%233ff23f' stroke-width='1.3' fill='none'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23f7f5f1'/%3E%3Cpath d='M1 8h3l1.5-4 2 8 1.5-6 1 2h5' stroke='%23d97757' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 </head>
 <body>
 <div id="app">
@@ -33,9 +33,10 @@
     <div class="panel-window howto-window">
       <h2>HOW TO PLAY</h2>
       <div class="howto-body">
-        <p><strong>You are a paramedic.</strong> Dispatch gives you almost nothing. Everything else — like a real OSCE exam — you have to get by asking.</p>
+        <p><strong>You are a paramedic, sitting an OSCE.</strong> Dispatch gives you almost nothing. Everything else you have to get by asking — exactly like a real exam.</p>
+        <p>Two characters answer you in <strong>TALK</strong>: the <strong>patient</strong> (or a bystander) speaks for themselves when you ask history questions. The <strong>examiner</strong> holds the case notes but can't see the room — they only tell you what an examination would find once you clearly describe the technique ("I look at his chest", "I listen to his chest", "do I see, hear or smell any danger?"). Vague or silent gets you nothing back, same as a real OSCE.</p>
         <ul>
-          <li><strong>TALK</strong> is a live chat with the scene: type what you'd actually say or do — "do I see, hear or smell any danger?", "hi, what's going on today?", "are they using accessory muscles?" — and the patient, a bystander, your partner, or your own eyes answer in character. Can't think what to say? Tap a suggestion chip instead.</li>
+          <li>Type what you'd actually say or do — "hi, what's going on today?", "are they using accessory muscles?" — or tap a suggestion chip to send a ready-made phrasing through the same chat.</li>
           <li><strong>Click the patient</strong> to focus a body region — it'll offer chips for inspecting/palpating/auscultating that spot, or just type what you're doing to it.</li>
           <li><strong>Notepad</strong> (left) is your running chart, filled in only by what you actually ask for.</li>
           <li><strong>Monitor</strong> shows a live rhythm once you attach leads, but numbers stay blank until you actually check each vital.</li>

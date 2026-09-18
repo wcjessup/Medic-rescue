@@ -216,7 +216,7 @@ function speakerMeta(speaker) {
     case "partner":
       return { label: "PARTNER", cls: "them" };
     case "exam":
-      return { label: "YOU OBSERVE", cls: "narrator" };
+      return { label: "EXAMINER", cls: "narrator" };
     default:
       return { label: "", cls: "system" };
   }
@@ -288,7 +288,7 @@ function sendChat(rawText) {
   const match = matchInput(text, topics);
 
   if (!match) {
-    encounter.chatLog.push({ speaker: "system", text: "Not sure what you mean — try asking about the scene, their history, or describing what you're examining." });
+    encounter.chatLog.push({ speaker: "system", text: "The examiner pauses — \"I've got the case notes, but I can't tell what you're asking or doing there. Describe the technique, or name what you're asking about.\"" });
     audio.error();
     renderAll();
     return;
@@ -296,7 +296,7 @@ function sendChat(rawText) {
 
   const result = match.run();
   if (result === null || result === undefined) {
-    encounter.chatLog.push({ speaker: "system", text: "(You already covered that.)" });
+    encounter.chatLog.push({ speaker: "system", text: "The examiner checks their notes — \"You've already got that from me.\"" });
     renderAll();
     return;
   }
