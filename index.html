@@ -34,11 +34,11 @@
       <h2>HOW TO PLAY</h2>
       <div class="howto-body">
         <p><strong>You are a paramedic, sitting an OSCE.</strong> Dispatch gives you almost nothing. Everything else you have to get by asking — exactly like a real exam.</p>
-        <p>Two characters answer you in <strong>TALK</strong>: the <strong>patient</strong> (or a bystander) speaks for themselves when you ask history questions. The <strong>examiner</strong> holds the case notes but can't see the room — they only tell you what an examination would find once you clearly describe the technique ("I look at his chest", "I listen to his chest", "do I see, hear or smell any danger?"). Vague or silent gets you nothing back, same as a real OSCE.</p>
+        <p>Two characters answer you in <strong>Chat</strong>: the <strong>patient</strong> (or a bystander) speaks for themselves when you ask history questions. The <strong>examiner</strong> holds the case notes but can't see the room — they only tell you what an examination would find once you clearly describe the technique ("I look at his chest", "I listen to his chest", "do I see, hear or smell any danger?"). Vague or silent gets you nothing back, same as a real OSCE.</p>
         <ul>
           <li>Type what you'd actually say or do — "hi, what's going on today?", "are they using accessory muscles?" — or tap a suggestion chip to send a ready-made phrasing through the same chat.</li>
           <li><strong>Click the patient</strong> to focus a body region — it'll offer chips for inspecting/palpating/auscultating that spot, or just type what you're doing to it.</li>
-          <li><strong>Notepad</strong> (left) is your running chart, filled in only by what you actually ask for.</li>
+          <li>The sidebar's <strong>Recents</strong> list is your running chart — everything you've charted so far, filled in only by what you actually ask for.</li>
           <li><strong>Monitor</strong> shows a live rhythm once you attach leads, but numbers stay blank until you actually check each vital.</li>
           <li><strong>The kit bag is unforgiving.</strong> You must pick the exact drug, concentration, dose and route. IV/IO drugs are locked out until you've established access. Wrong choices can hurt the patient.</li>
           <li>When you're ready, open <strong>DIAGNOSIS</strong> to commit to a provisional diagnosis and a disposition (stay home, GP referral, transport priority, hospital type, or ceasing resuscitation). That ends the case and you're graded.</li>
@@ -71,52 +71,35 @@
 
   <!-- ===================== ENCOUNTER ===================== -->
   <section id="screen-encounter" class="screen hidden">
-    <header id="hud" class="bar">
-      <div class="hud-left">
-        <span id="hud-case-name">—</span>
-        <span id="hud-clock" class="mono">00:00</span>
-      </div>
-      <div class="hud-right">
-        <button class="btn btn-small" id="btn-diagnosis" data-action="open-diagnosis">END CALL / DIAGNOSIS</button>
-        <button class="btn btn-small" data-action="mute">🔊</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <!-- LEFT: NOTEPAD -->
-      <aside id="notepad" class="panel-window">
-        <h3>CHART</h3>
-        <div id="notepad-entries" class="notepad-entries"></div>
+    <div class="app-shell">
+      <!-- LEFT: SIDEBAR -->
+      <aside id="app-sidebar" class="sidebar">
+        <div class="sidebar-brand">PARAMEDIC</div>
+        <nav id="sidebar-nav" class="sidebar-nav"></nav>
+        <div class="sidebar-recents">
+          <div class="sidebar-section-label">Recents</div>
+          <div id="sidebar-recents-list" class="recents-list"></div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="sidebar-avatar" id="sidebar-avatar">MD</div>
+          <button class="btn sidebar-new-btn" data-action="back-to-caseselect">+ New Shift</button>
+        </div>
       </aside>
 
-      <!-- CENTER: MONITOR + PATIENT + TREND -->
-      <main id="stage">
-        <div id="monitor-panel" class="panel-window monitor">
-          <canvas id="monitor-canvas" width="520" height="150"></canvas>
-          <div id="monitor-digits" class="monitor-digits"></div>
-        </div>
-
-        <div id="patient-panel" class="panel-window">
-          <canvas id="patient-canvas" width="260" height="320"></canvas>
-          <p id="patient-status-line" class="mono small"></p>
-        </div>
-
-        <div id="trend-panel" class="panel-window">
-          <h3>VITALS TREND</h3>
-          <div class="trend-scroll">
-            <table id="trend-table">
-              <thead><tr id="trend-head"><th>time</th></tr></thead>
-              <tbody id="trend-body"></tbody>
-            </table>
+      <!-- RIGHT: MAIN CONTENT -->
+      <main id="main-content" class="main-content">
+        <header id="main-header" class="main-header">
+          <div class="main-header-title">
+            <span id="hud-case-name">—</span>
+            <span id="hud-clock" class="mono">00:00</span>
           </div>
-        </div>
+          <div class="main-header-actions">
+            <button class="btn btn-small" data-action="open-diagnosis">End Call</button>
+            <button class="btn btn-small icon-btn" data-action="mute">🔊</button>
+          </div>
+        </header>
+        <div id="main-body" class="main-body"></div>
       </main>
-
-      <!-- RIGHT: ACTION TABS -->
-      <aside id="action-panel" class="panel-window">
-        <div id="action-tabs" class="tabs"></div>
-        <div id="tab-content" class="tab-content"></div>
-      </aside>
     </div>
   </section>
 

@@ -108,7 +108,11 @@ export function matchInput(input, topics) {
   let best = null;
   let bestScore = 0;
   for (const t of topics) {
-    const s = scoreKeywords(norm, t.keywords) + (t.boost || 0);
+    const base = scoreKeywords(norm, t.keywords);
+    // the "selected region" boost only breaks ties between genuinely relevant
+    // matches — it must never be enough on its own to win, or focusing a
+    // region would hijack unrelated messages (e.g. "get some vitals").
+    const s = base > 0 ? base + (t.boost || 0) : 0;
     if (s > bestScore) {
       bestScore = s;
       best = t;

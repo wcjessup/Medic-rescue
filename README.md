@@ -31,12 +31,12 @@ browser.
 
 ## How to play
 
-- **Chart (left panel)** is your running notes. Nothing appears there
-  unless you go and get it — no free information.
-- **Monitor (top centre)** shows a live ECG rhythm once you attach the
-  leads, but every number (BP, RR, temp, GCS, SpO2 before the probe is on)
-  stays blank until you actually perform that check.
-- **TALK** is the primary way you gather everything — a chat box, not a
+The encounter screen is laid out like a chat app: a left sidebar (brand,
+navigation, a running "Recents" log of everything charted so far, and a
+"+ New Shift" button) next to a main panel that shows whichever section
+is selected.
+
+- **Chat** is the primary way you gather everything — a chat box, not a
   menu. Type free text the way you'd actually speak on scene: "do I see,
   hear or smell any danger?", "hi, I'm your paramedic, what's going on
   today?", "are they using accessory muscles?", "can you get a set of
@@ -50,22 +50,27 @@ browser.
   patient. If it can't tell, it says so — try rephrasing, or tap one of
   the suggestion chips, which just send a canonical phrasing through the
   same chat pipeline (not a hidden answer key).
-- **Click the patient** to focus a body region — chips appear offering to
-  inspect/palpate/auscultate it, or type what you're doing to it directly
-  ("I feel his pulse", "I listen to his chest").
-- **VITALS** tab shows the same trend table plus reliable one-tap buttons
-  for a full obs check and a BGL, if you'd rather not type it.
-- **KIT BAG** — pick a drug, its concentration (where relevant), a dose,
+- **Click the patient** (shown next to the monitor in Chat) to focus a
+  body region — chips appear offering to inspect/palpate/auscultate it,
+  or type what you're doing to it directly ("I feel his pulse", "I
+  listen to his chest").
+- The **monitor** next to the patient shows a live ECG rhythm once you
+  attach the leads, but every number (BP, RR, temp, GCS, SpO2 before the
+  probe is on) stays blank until you actually perform that check.
+- **Vitals** shows the trend table (every obs you've taken, so you can
+  watch the patient trend over the job) plus reliable one-tap buttons for
+  a full obs check and a BGL, if you'd rather not type it.
+- **Kit Bag** — pick a drug, its concentration (where relevant), a dose,
   and a route. Routes that need IV/IO access are greyed out and locked
   until you've actually cannulated the patient. Nothing stops you from
   picking the wrong drug, dose or route — the patient (and your score)
   will suffer the consequences.
-- **PROCEDURES** — IV/IO access, oxygen, airway adjuncts, the cardiac
+- **Procedures** — IV/IO access, oxygen, airway adjuncts, the cardiac
   monitor, defibrillation/cardioversion, and CPR.
-- **DIAGNOSIS** (or the "END CALL / DIAGNOSIS" button in the header) —
-  commit to a provisional diagnosis and a disposition (stay home, GP
-  referral, non-emergent or emergent transport, or ceasing resuscitation).
-  This ends the job and takes you to your shift debrief.
+- **Diagnosis** (or the "End Call" button in the header) — commit to a
+  provisional diagnosis and a disposition (stay home, GP referral,
+  non-emergent or emergent transport, or ceasing resuscitation). This
+  ends the job and takes you to your shift debrief.
 
 Time only moves when you act — every question, exam, procedure and
 treatment costs simulated minutes, and each case's physiology evolves

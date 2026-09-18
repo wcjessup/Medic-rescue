@@ -7,19 +7,32 @@ import { audio } from "../audio/audio.js";
 import { openModal, closeModal, toast } from "./modal.js";
 import { buildTopics, matchInput } from "../sim/nlu.js";
 
+const ICONS = {
+  chat: '<path d="M2.5 3.5h11v8h-6.2L4 14v-2.5H2.5v-8z"/>',
+  folder: '<path d="M2 4.2h4.2l1.3 1.6H14v7.2H2V4.2z"/>',
+  pill: '<g transform="rotate(45 8 8)"><rect x="3" y="6" width="10" height="4" rx="2"/><line x1="8" y1="6" x2="8" y2="10"/></g>',
+  chart: '<line x1="3.5" y1="13" x2="3.5" y2="7.5"/><line x1="8" y1="13" x2="8" y2="3"/><line x1="12.5" y1="13" x2="12.5" y2="9.5"/>',
+  clipboard: '<rect x="3" y="2.5" width="10" height="11.5" rx="1.2"/><path d="M6 2.5h4v2H6z"/><path d="M5.5 9l1.6 1.6L10.8 7.2"/>',
+};
+
+function iconSvg(name) {
+  return `<svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+}
+
 const TABS = [
-  { id: "talk", label: "Talk" },
-  { id: "vitals", label: "Vitals" },
-  { id: "kit", label: "Kit Bag" },
-  { id: "procedures", label: "Procedures" },
-  { id: "diagnosis", label: "Diagnosis" },
+  { id: "talk", label: "Chat", icon: "chat" },
+  { id: "procedures", label: "Procedures", icon: "folder" },
+  { id: "kit", label: "Kit Bag", icon: "pill" },
+  { id: "vitals", label: "Vitals", icon: "chart" },
+  { id: "diagnosis", label: "Diagnosis", icon: "clipboard", badge: "Live" },
 ];
 
 const EXAM_VERBS = { inspect: "look at", palpate: "feel", auscultate: "listen to" };
+const CAT_LABEL = { dispatch: "DISPATCH", history: "HX", exam: "EXAM", vitals: "OBS", procedure: "PROC", treatment: "RX", event: "!", scene: "SCENE", primary: "SURVEY" };
 
 let els = null;
 let encounter = null;
-let activeTab = "history";
+let activeTab = "talk";
 let selectedRegion = null;
 let rafId = null;
 let onFinishCb = null;
@@ -32,31 +45,38 @@ function cacheEls() {
   els = {
     hudCaseName: q("hud-case-name"),
     hudClock: q("hud-clock"),
-    notepadEntries: q("notepad-entries"),
-    monitorCanvas: q("monitor-canvas"),
-    monitorDigits: q("monitor-digits"),
-    patientCanvas: q("patient-canvas"),
-    patientStatusLine: q("patient-status-line"),
-    trendHead: q("trend-head"),
-    trendBody: q("trend-body"),
-    actionTabs: q("action-tabs"),
-    tabContent: q("tab-content"),
-    muteBtn: document.querySelector('#hud [data-action="mute"]'),
+    sidebarNav: q("sidebar-nav"),
+    sidebarRecents: q("sidebar-recents-list"),
+    mainBody: q("main-body"),
+    muteBtn: document.querySelector('#main-header [data-action="mute"]'),
   };
 }
 
 export function initEncounterScreen() {
   cacheEls();
-  els.patientCanvas.addEventListener("click", handlePatientClick);
-  els.actionTabs.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tab-btn");
+  els.sidebarNav.addEventListener("click", (e) => {
+    const btn = e.target.closest(".nav-item");
     if (!btn) return;
     activeTab = btn.dataset.tab;
     audio.click();
-    renderTabBar();
-    renderTabContent();
+    renderSidebarNav();
+    renderMainBody();
   });
-  els.tabContent.addEventListener("click", handleTabContentClick);
+  els.mainBody.addEventListener("click", (e) => {
+    if (e.target.id === "patient-canvas") {
+      handlePatientClick(e);
+      return;
+    }
+    handleMainBodyClick(e);
+  });
+  els.mainBody.addEventListener("submit", (e) => {
+    if (e.target.id !== "chat-form") return;
+    e.preventDefault();
+    const input = q("chat-input");
+    const text = input.value;
+    input.value = "";
+    sendChat(text);
+  });
   els.muteBtn.addEventListener("click", () => {
     audio.setEnabled(!audio.enabled);
     els.muteBtn.textContent = audio.enabled ? "🔊" : "🔇";
@@ -91,8 +111,10 @@ function startLoop() {
   cancelAnimationFrame(rafId);
   const step = (t) => {
     if (encounter && !encounter.ended) {
-      drawMonitor(els.monitorCanvas, encounter, { t });
-      drawPatient(els.patientCanvas, encounter, { t, highlightRegion: selectedRegion });
+      const monitorCanvas = q("monitor-canvas");
+      const patientCanvas = q("patient-canvas");
+      if (monitorCanvas) drawMonitor(monitorCanvas, encounter, { t });
+      if (patientCanvas) drawPatient(patientCanvas, encounter, { t, highlightRegion: selectedRegion });
     }
     rafId = requestAnimationFrame(step);
   };
@@ -104,30 +126,69 @@ function startLoop() {
 function renderAll() {
   if (!encounter) return;
   els.hudClock.textContent = encounter.clockLabel();
-  renderNotepad();
-  renderDigits();
-  renderTrend();
-  renderTabBar();
-  renderTabContent();
-  renderPatientStatus();
-  if (encounter.ended) return;
+  renderRecents();
+  renderSidebarNav();
+  renderMainBody();
 }
 
-function renderNotepad() {
-  const CAT_LABEL = { dispatch: "DISPATCH", history: "HX", exam: "EXAM", vitals: "OBS", procedure: "PROC", treatment: "RX", event: "!", scene: "SCENE", primary: "SURVEY" };
+function renderRecents() {
   if (!encounter.notepad.length) {
-    els.notepadEntries.innerHTML = `<p class="empty">Nothing charted yet.</p>`;
+    els.sidebarRecents.innerHTML = `<div class="recents-empty">Nothing yet.</div>`;
     return;
   }
-  els.notepadEntries.innerHTML = encounter.notepad
+  const items = encounter.notepad.slice().reverse().slice(0, 60);
+  els.sidebarRecents.innerHTML = items
     .map(
-      (e) => `<div class="entry"><span class="t">${e.label}</span> <span class="cat">${CAT_LABEL[e.cat] || e.cat}</span><br>${escapeHtml(e.text)}</div>`
+      (e) =>
+        `<div class="recents-item" title="${escapeHtml(e.text)}"><span class="recents-time">${e.label}</span>${escapeHtml(truncate(e.text, 42))}</div>`
     )
     .join("");
-  els.notepadEntries.scrollTop = els.notepadEntries.scrollHeight;
+}
+
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n - 1) + "…" : str;
+}
+
+function renderSidebarNav() {
+  els.sidebarNav.innerHTML = TABS.map(
+    (t) =>
+      `<button class="nav-item${t.id === activeTab ? " active" : ""}" data-tab="${t.id}">
+        ${iconSvg(t.icon)}<span>${t.label}</span>
+        ${t.badge ? `<span class="nav-badge">${t.badge}</span>` : ""}
+      </button>`
+  ).join("");
+}
+
+function renderMainBody() {
+  if (encounter.ended) return;
+  let html;
+  switch (activeTab) {
+    case "talk":
+      html = buildTalkView();
+      break;
+    case "vitals":
+      html = `<div class="simple-panel">${buildVitalsPanel()}</div>`;
+      break;
+    case "kit":
+      html = `<div class="simple-panel">${buildKitPanel()}</div>`;
+      break;
+    case "procedures":
+      html = `<div class="simple-panel">${buildProceduresPanel()}</div>`;
+      break;
+    case "diagnosis":
+      html = `<div class="simple-panel">${buildDiagnosisPanel()}</div>`;
+      break;
+  }
+  els.mainBody.innerHTML = html;
+  renderDigits();
+  renderPatientStatus();
+  const msgsEl = q("chat-messages");
+  if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
 function renderDigits() {
+  const digitsEl = q("monitor-digits");
+  if (!digitsEl) return;
   const last = encounter.vitalsHistory[encounter.vitalsHistory.length - 1];
   const items = [
     { label: "HR", value: encounter.monitorAttached ? Math.round(encounter.vitals.hr) : null, alarm: encounter.monitorAttached && (encounter.vitals.hr > 160 || encounter.vitals.hr < 40) },
@@ -139,7 +200,7 @@ function renderDigits() {
     { label: "ETCO2", value: encounter.hasCapnography() ? Math.round(encounter.vitals.etco2) : null },
     { label: "RHYTHM", value: encounter.monitorAttached ? encounter.rhythm.toUpperCase() : null },
   ];
-  els.monitorDigits.innerHTML = items
+  digitsEl.innerHTML = items
     .map(
       (it) =>
         `<div class="digit${it.alarm ? " alarm" : ""}"><span class="label">${it.label}</span><span class="value${it.value === null || it.value === undefined ? " dash" : ""}">${it.value ?? "--"}</span></div>`
@@ -147,7 +208,18 @@ function renderDigits() {
     .join("");
 }
 
-function renderTrend() {
+function renderPatientStatus() {
+  const el = q("patient-status-line");
+  if (!el) return;
+  const c = encounter;
+  let s = `${c.caseDef.name}, ${c.caseDef.age}${c.caseDef.sex}, ${c.caseDef.weightKg}kg — `;
+  if (c.arrested) s += "IN CARDIAC ARREST";
+  else if (!c.conscious) s += "UNCONSCIOUS";
+  else s += "conscious";
+  el.textContent = s;
+}
+
+function buildTrendTableHtml() {
   const rows = [
     { key: "hr", label: "HR" },
     { key: "bp", label: "BP" },
@@ -156,55 +228,59 @@ function renderTrend() {
     { key: "temp", label: "Temp" },
     { key: "gcs", label: "GCS" },
   ];
-  els.trendHead.innerHTML = `<th>time</th>` + encounter.vitalsHistory.map((v) => `<th>${v.label}</th>`).join("");
+  const head = `<th>time</th>` + encounter.vitalsHistory.map((v) => `<th>${v.label}</th>`).join("");
+  let body;
   if (!encounter.vitalsHistory.length) {
-    els.trendBody.innerHTML = `<tr><td class="row-label">—</td><td>no obs taken yet</td></tr>`;
-    return;
+    body = `<tr><td class="row-label">—</td><td>no obs taken yet</td></tr>`;
+  } else {
+    body = rows
+      .map((r) => {
+        const cells = encounter.vitalsHistory
+          .map((v) => {
+            let val;
+            if (r.key === "bp") val = `${v.sbp}/${v.dbp}`;
+            else if (r.key === "hr") val = v.hr ?? "—";
+            else if (r.key === "spo2") val = v.spo2 !== null ? `${v.spo2}%` : "—";
+            else val = v[r.key];
+            return `<td>${val}</td>`;
+          })
+          .join("");
+        return `<tr><td class="row-label">${r.label}</td>${cells}</tr>`;
+      })
+      .join("");
   }
-  els.trendBody.innerHTML = rows
-    .map((r) => {
-      const cells = encounter.vitalsHistory
-        .map((v) => {
-          let val;
-          if (r.key === "bp") val = `${v.sbp}/${v.dbp}`;
-          else if (r.key === "hr") val = v.hr ?? "—";
-          else if (r.key === "spo2") val = v.spo2 !== null ? `${v.spo2}%` : "—";
-          else val = v[r.key];
-          return `<td>${val}</td>`;
-        })
-        .join("");
-      return `<tr><td class="row-label">${r.label}</td>${cells}</tr>`;
-    })
-    .join("");
+  return `
+    <div class="panel-window" id="trend-panel">
+      <h3>Vitals Trend</h3>
+      <div class="trend-scroll">
+        <table id="trend-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+      </div>
+    </div>`;
 }
 
-function renderPatientStatus() {
-  const c = encounter;
-  let s = `${c.caseDef.name}, ${c.caseDef.age}${c.caseDef.sex}, ${c.caseDef.weightKg}kg — `;
-  if (c.arrested) s += "IN CARDIAC ARREST";
-  else if (!c.conscious) s += "UNCONSCIOUS";
-  else s += "conscious";
-  els.patientStatusLine.textContent = s;
-}
-
-function renderTabBar() {
-  els.actionTabs.innerHTML = TABS.map((t) => `<button class="tab-btn${t.id === activeTab ? " active" : ""}" data-tab="${t.id}">${t.label}</button>`).join("");
-}
-
-function renderTabContent() {
-  if (encounter.ended) return;
-  switch (activeTab) {
-    case "talk":
-      return renderTalkTab();
-    case "vitals":
-      return renderVitalsTab();
-    case "kit":
-      return renderKitTab();
-    case "procedures":
-      return renderProceduresTab();
-    case "diagnosis":
-      return renderDiagnosisTab();
-  }
+function buildTalkView() {
+  const messagesHtml = encounter.chatLog.map(renderChatBubble).join("");
+  return `
+    <div class="chat-view">
+      <div class="vitals-row">
+        <div class="panel-window monitor mini">
+          <canvas id="monitor-canvas" width="520" height="150"></canvas>
+          <div id="monitor-digits" class="monitor-digits"></div>
+        </div>
+        <div class="panel-window mini patient-mini">
+          <canvas id="patient-canvas" width="170" height="210"></canvas>
+          <p id="patient-status-line" class="mono small"></p>
+        </div>
+      </div>
+      <div class="chat-root">
+        <div class="chat-messages" id="chat-messages">${messagesHtml}</div>
+        <div class="chat-chips" id="chat-chips">${buildChipsHtml()}</div>
+        <form class="chat-input-row" id="chat-form">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question, or say what you're doing…" autocomplete="off" />
+          <button type="submit" class="btn btn-small">SEND</button>
+        </form>
+      </div>
+    </div>`;
 }
 
 function speakerMeta(speaker) {
@@ -251,29 +327,6 @@ function buildChipsHtml() {
   return chips.map((c) => `<button class="chip" data-role="chip" data-text="${escapeHtml(c.text)}">${escapeHtml(c.label)}</button>`).join("");
 }
 
-function renderTalkTab() {
-  const messagesHtml = encounter.chatLog.map(renderChatBubble).join("");
-  els.tabContent.innerHTML = `
-    <div class="chat-root">
-      <div class="chat-messages" id="chat-messages">${messagesHtml}</div>
-      <div class="chat-chips" id="chat-chips">${buildChipsHtml()}</div>
-      <form class="chat-input-row" id="chat-form">
-        <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question, or say what you're doing…" autocomplete="off" />
-        <button type="submit" class="btn btn-small">SEND</button>
-      </form>
-    </div>
-  `;
-  const msgsEl = document.getElementById("chat-messages");
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-  document.getElementById("chat-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const input = document.getElementById("chat-input");
-    const text = input.value;
-    input.value = "";
-    sendChat(text);
-  });
-}
-
 function formatVitalsSnapshot(snap) {
   return `Righto, checking now... Obs are: HR ${snap.hr ?? "not on the monitor yet"}, BP ${snap.sbp}/${snap.dbp}, resp rate ${snap.rr}, sats ${snap.spo2 ?? "no probe on yet"}${snap.spo2 !== null ? "%" : ""}, temp ${snap.temp}°C, GCS ${snap.gcs}.`;
 }
@@ -315,8 +368,9 @@ function sendChat(rawText) {
   renderAll();
 }
 
-function renderVitalsTab() {
-  let html = `<div class="section-label">Vital Signs</div>`;
+function buildVitalsPanel() {
+  let html = buildTrendTableHtml();
+  html += `<div class="section-label">Vital Signs</div>`;
   html += `<button class="list-btn" data-role="take-vitals">
     <div class="lb-title">Perform Full Vital Signs Check</div>
     <div class="lb-sub">BP cuff, RR count, temp, GCS (+ live HR/SpO2 if monitor/probe attached) — takes 3 min</div>
@@ -327,15 +381,7 @@ function renderVitalsTab() {
     <div class="lb-title">Blood Glucose Test (BGL)</div>
     ${bglDone ? `<div class="lb-sub">BGL ${encounter.vitals.bgl} mmol/L</div>` : ""}
   </button>`;
-  html += `<div class="section-label">History (${encounter.vitalsHistory.length} taken)</div>`;
-  if (encounter.vitalsHistory.length) {
-    html += encounter.vitalsHistory
-      .slice()
-      .reverse()
-      .map((v) => `<div class="list-btn" style="cursor:default"><div class="lb-title">${v.label}</div><div class="lb-sub">HR ${v.hr ?? "—"} · BP ${v.sbp}/${v.dbp} · RR ${v.rr} · SpO2 ${v.spo2 ?? "—"} · T ${v.temp} · GCS ${v.gcs}</div></div>`)
-      .join("");
-  }
-  els.tabContent.innerHTML = html;
+  return html;
 }
 
 function medUnavailableReason(med) {
@@ -344,20 +390,20 @@ function medUnavailableReason(med) {
   return null;
 }
 
-function renderKitTab() {
+function buildKitPanel() {
   let html = `<div class="section-label">Kit Bag</div>`;
   html += MEDS.map((med) => {
     const locked = medUnavailableReason(med);
     const given = encounter.medsGiven.filter((m) => m.medId === med.id).length;
     return `<button class="list-btn" data-role="give-med" data-med="${med.id}">
-      <div class="lb-title">${med.name}${given ? ` <span style="color:var(--accent-dim)">(given x${given})</span>` : ""}</div>
-      <div class="lb-sub">${med.class}${locked ? ` · <span style="color:var(--danger)">${locked}</span>` : ""}</div>
+      <div class="lb-title">${med.name}${given ? ` <span class="given-tag">(given x${given})</span>` : ""}</div>
+      <div class="lb-sub">${med.class}${locked ? ` · <span class="locked-tag">${locked}</span>` : ""}</div>
     </button>`;
   }).join("");
-  els.tabContent.innerHTML = html;
+  return html;
 }
 
-function renderProceduresTab() {
+function buildProceduresPanel() {
   let html = "";
   const groups = {};
   for (const eq of EQUIPMENT) {
@@ -391,10 +437,10 @@ function renderProceduresTab() {
     html += `<button class="list-btn" data-role="cpr-start"><div class="lb-title">Start CPR</div></button>`;
   }
 
-  els.tabContent.innerHTML = html;
+  return html;
 }
 
-function renderDiagnosisTab() {
+function buildDiagnosisPanel() {
   const cd = encounter.caseDef;
   let html = `<div class="section-label">Provisional Diagnosis</div>`;
   html += cd.diagnosisOptions
@@ -406,22 +452,23 @@ function renderDiagnosisTab() {
     .join("");
   const ready = encounter.diagnosisId && encounter.dispositionId;
   html += `<button class="btn btn-big" style="width:100%;margin-top:10px" data-role="confirm-end" ${ready ? "" : "disabled"}>CONFIRM &amp; END CALL</button>`;
-  els.tabContent.innerHTML = html;
+  return html;
 }
 
 // ---------------------------------------------------------------- events
 
 function handlePatientClick(e) {
-  const region = hitTestPatient(els.patientCanvas, e);
+  const canvas = e.target;
+  const region = hitTestPatient(canvas, e);
   if (!region) return;
   selectedRegion = region;
   activeTab = "talk";
   audio.click();
-  renderTabBar();
-  renderTabContent();
+  renderSidebarNav();
+  renderMainBody();
 }
 
-function handleTabContentClick(e) {
+function handleMainBodyClick(e) {
   const btn = e.target.closest("[data-role]");
   if (!btn || btn.disabled) return;
   const role = btn.dataset.role;
@@ -451,11 +498,11 @@ function handleTabContentClick(e) {
   } else if (role === "select-dx") {
     encounter.setDiagnosis(btn.dataset.id);
     audio.click();
-    renderDiagnosisTab();
+    renderMainBody();
   } else if (role === "select-dispo") {
     encounter.setDisposition(btn.dataset.id);
     audio.click();
-    renderDiagnosisTab();
+    renderMainBody();
   } else if (role === "confirm-end") {
     finishEncounter();
   }
@@ -617,6 +664,6 @@ export function getActiveEncounter() {
 export function goToDiagnosisTab() {
   if (!encounter || encounter.ended) return;
   activeTab = "diagnosis";
-  renderTabBar();
-  renderTabContent();
+  renderSidebarNav();
+  renderMainBody();
 }
